@@ -8,7 +8,7 @@ const NOTE_MIN = 24;   // C1
 const NOTE_MAX = 96;   // C7
 const IDLE_AFTER_MS = 400;
 const SETTINGS_KEY = 'pitcher.settings';
-const DEFAULTS = { autoRange: true, low: 36, high: 84, window: 10, snap: false, gate: -50, deviceId: '' };
+const DEFAULTS = { autoRange: true, low: 36, high: 84, window: 10, gate: -50, deviceId: '' };
 
 const $ = (id) => document.getElementById(id);
 const els = {
@@ -20,7 +20,6 @@ const els = {
   high: $('high'),
   window: $('window'),
   windowValue: $('windowValue'),
-  snap: $('snap'),
   gate: $('gate'),
   gateValue: $('gateValue'),
   levelFill: $('levelFill'),
@@ -63,14 +62,12 @@ function applySettings() {
   graph.auto = settings.autoRange;
   if (!settings.autoRange) graph.setRange(settings.low, settings.high);
   graph.windowMs = settings.window * 1000;
-  graph.snap = settings.snap;
   els.autoRange.checked = settings.autoRange;
   els.rangeNotes.hidden = settings.autoRange;
   els.low.value = graph.low;
   els.high.value = graph.high;
   els.window.value = settings.window;
   els.windowValue.textContent = `${settings.window} s`;
-  els.snap.checked = settings.snap;
   els.gate.value = settings.gate;
   els.gateValue.textContent = `${settings.gate} dB`;
   els.levelGate.style.left = `${dbToPercent(settings.gate)}%`;
@@ -281,12 +278,6 @@ els.high.addEventListener('change', () => onRangeChange('high'));
 
 els.window.addEventListener('input', () => {
   settings.window = Number(els.window.value);
-  saveSettings();
-  applySettings();
-});
-
-els.snap.addEventListener('change', () => {
-  settings.snap = els.snap.checked;
   saveSettings();
   applySettings();
 });

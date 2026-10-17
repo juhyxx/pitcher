@@ -30,7 +30,6 @@ export class PitchGraph {
     this.auto = true;
     this.onRangeChange = null;
     this.windowMs = 10000;
-    this.snap = false;
     this.t0 = performance.now();
     this.now = this.t0;
     this.lastRender = 0;
@@ -229,7 +228,7 @@ export class PitchGraph {
   }
 
   drawTrace(x, y) {
-    const { ctx, w, h, colors, snap } = this;
+    const { ctx, w, h, colors } = this;
     const paths = { good: new Path2D(), warn: new Path2D(), bad: new Path2D() };
     const tStart = this.now - this.windowMs - MAX_GAP_MS;
     let prev = null;
@@ -240,16 +239,13 @@ export class PitchGraph {
         prev = null;
         continue;
       }
-      const nearest = Math.round(p.midi);
-      const m = snap ? nearest : p.midi;
-      const cents = Math.abs(p.midi - nearest) * 100;
+      const m = p.midi;
+      const cents = Math.abs(m - Math.round(m)) * 100;
       const path = paths[cents <= 10 ? 'good' : cents <= 25 ? 'warn' : 'bad'];
       const px = x(p.t);
       const py = y(m);
 
-      const connected = prev
-        && p.t - prev.t < MAX_GAP_MS
-        && (snap ? m === prev.m : Math.abs(m - prev.m) <= 1);
+      const connected = prev && p.t - prev.t < MAX_GAP_MS && Math.abs(m - prev.m) <= 1;
       if (connected) {
         path.moveTo(prev.x, prev.y);
         path.lineTo(px, py);

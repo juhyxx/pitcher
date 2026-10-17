@@ -42,7 +42,6 @@ When adding a file, list it in `FILES` in `sw.js`.
 
 - One grid line per semitone; C notes are emphasised, sharps get a shaded band.
 - Trace colour shows tuning: green within ±10¢, amber within ±25¢, red beyond.
-- **Snap to notes** quantises the trace so each held tone is a flat line.
 - **Auto range** (default) shows the octave you're singing in, grows as soon as a note
   on screen falls outside it, and zooms back in once those notes scroll away. Turn it
   off to pick the lowest and highest note yourself.
