@@ -22,6 +22,7 @@ const FILES = [
   'icons/maskable-512.png',
   'icons/apple-touch-icon.png',
   'styles.css',
+  'fonts/Silkscreen-Regular.woff2',
   'src/version.js',
   'src/notes.js',
   'src/pitch.js',

@@ -1,6 +1,7 @@
 import { isC, isSharp, noteName } from './notes.js';
 
-const GUTTER = 48;          // px reserved on the left for note labels
+const GUTTER = 52;          // px reserved on the left for note labels
+const FONT = 'Silkscreen, monospace';
 const HISTORY_MS = 31000;   // keep enough for the largest window option
 const MAX_GAP_MS = 120;     // longer gaps between frames break the trace
 const LABEL_MIN_ROW = 12;   // below this row height only C notes get labels
@@ -43,29 +44,22 @@ export class PitchGraph {
       this.resize();
       this.render();
     }).observe(canvas);
-
-    matchMedia('(prefers-color-scheme: light)').addEventListener('change', () => {
-      this.readColors();
-      this.render();
-    });
   }
 
   readColors() {
     const style = getComputedStyle(document.documentElement);
     const v = (name) => style.getPropertyValue(name).trim();
     this.colors = {
-      bg: v('--plot-bg'),
       gutter: v('--plot-gutter'),
       band: v('--plot-band'),
       line: v('--plot-line'),
       lineStrong: v('--plot-line-strong'),
       label: v('--plot-label'),
-      labelStrong: v('--text'),
+      labelStrong: v('--plot-label-strong'),
       time: v('--plot-time'),
-      accent: v('--accent'),
-      good: v('--good'),
-      warn: v('--warn'),
-      bad: v('--bad'),
+      good: v('--led'),
+      warn: v('--led-warn'),
+      bad: v('--led-bad'),
     };
   }
 
@@ -175,8 +169,7 @@ export class PitchGraph {
     const current = this.latest;
     const currentRow = current == null ? null : Math.round(current);
 
-    ctx.fillStyle = colors.bg;
-    ctx.fillRect(0, 0, w, h);
+    ctx.clearRect(0, 0, w, h);
 
     // Darker bands on sharps, piano-roll style.
     ctx.fillStyle = colors.band;
@@ -209,7 +202,7 @@ export class PitchGraph {
     const first = Math.ceil((this.now - this.windowMs - this.t0) / 1000);
     const last = Math.floor((this.now - this.t0) / 1000);
 
-    ctx.font = '10px system-ui, sans-serif';
+    ctx.font = `8px ${FONT}`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'bottom';
     for (let s = Math.max(0, first); s <= last; s++) {
@@ -261,18 +254,25 @@ export class PitchGraph {
     ctx.beginPath();
     ctx.rect(GUTTER, 0, w - GUTTER, h);
     ctx.clip();
-    ctx.lineWidth = 3;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
-    for (const key of ['bad', 'warn', 'good']) {
-      ctx.strokeStyle = colors[key];
-      ctx.stroke(paths[key]);
+    // LED look: a wide faint halo under a thin bright line.
+    for (const [width, alpha] of [[7, 0.15], [2.5, 1]]) {
+      ctx.lineWidth = width;
+      ctx.globalAlpha = alpha;
+      for (const key of ['bad', 'warn', 'good']) {
+        ctx.strokeStyle = colors[key];
+        ctx.stroke(paths[key]);
+      }
     }
-    // Marker on the live sample.
+    ctx.globalAlpha = 1;
+    // Glowing marker on the live sample.
     if (last && this.latest != null) {
-      ctx.fillStyle = colors.accent;
+      ctx.fillStyle = colors.good;
+      ctx.shadowColor = colors.good;
+      ctx.shadowBlur = 12;
       ctx.beginPath();
-      ctx.arc(last.x, last.y, 5, 0, Math.PI * 2);
+      ctx.arc(last.x, last.y, 4.5, 0, Math.PI * 2);
       ctx.fill();
     }
     ctx.restore();
@@ -282,16 +282,22 @@ export class PitchGraph {
     const { ctx, h, colors } = this;
     ctx.fillStyle = colors.gutter;
     ctx.fillRect(0, 0, GUTTER, h);
+    ctx.fillStyle = colors.line;
+    ctx.fillRect(GUTTER - 1, 0, 1, h);
 
+    ctx.save();
+    ctx.font = `8px ${FONT}`;
     ctx.textAlign = 'right';
     ctx.textBaseline = 'middle';
     for (let m = first; m <= last; m++) {
       const active = m === currentRow;
       if (!active && !isC(m) && rowH < LABEL_MIN_ROW) continue;
-      ctx.font = `${active || isC(m) ? 600 : 400} 11px system-ui, sans-serif`;
-      ctx.fillStyle = active ? colors.accent : isC(m) ? colors.labelStrong : colors.label;
-      ctx.fillText(noteName(m), GUTTER - 8, y(m));
+      ctx.fillStyle = active ? colors.good : isC(m) ? colors.labelStrong : colors.label;
+      ctx.shadowColor = colors.good;
+      ctx.shadowBlur = active ? 8 : 0;
+      ctx.fillText(noteName(m), GUTTER - 10, Math.round(y(m)) + 1);
     }
+    ctx.restore();
   }
 }
 

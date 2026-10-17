@@ -5,11 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Pitcher</title>
   <meta name="description" content="Real-time pitch tracker: sing or play and see every note on a scrolling graph.">
-  <meta name="theme-color" content="#171a21" media="(prefers-color-scheme: dark)">
-  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#1c1c1c">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="preload" href="fonts/Silkscreen-Regular.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="styles.css">
   <script type="module" src="src/main.js"></script>
 </head>
@@ -31,45 +31,49 @@
         <circle class="brand-dot" cx="86" cy="22" r="10"/>
       </svg>
     </h1>
+
     <div class="readout idle" id="readout" aria-live="polite">
-      <span class="note" id="note">–</span>
-      <span class="freq" id="freq">— Hz</span>
-      <div class="cents" title="Deviation from the nearest note in cents">
-        <div class="cents-track"><div class="cents-needle" id="needle"></div></div>
+      <div class="lcd"><span class="note" id="note">--</span></div>
+      <div class="readout-side">
+        <span class="freq" id="freq">--- Hz</span>
+        <div class="leds cents-leds" id="centsLeds" title="Deviation from the nearest note, −50 to +50 cents"></div>
         <span class="cents-value" id="cents">±0¢</span>
       </div>
     </div>
   </header>
 
   <div class="toolbar">
-    <button id="toggle" class="primary" type="button">Start</button>
+    <button id="toggle" class="btn start" type="button">Start</button>
 
-    <label>Input
+    <label class="module">
+      <span class="module-label">Input</span>
       <select id="device"><option value="">System default</option></select>
     </label>
 
-    <span class="range">Range
-      <label class="check"><input type="checkbox" id="autoRange"> Auto</label>
-      <span class="range-notes" id="rangeNotes">
-        <select id="low" aria-label="Lowest note"></select>
-        <span class="dash">–</span>
-        <select id="high" aria-label="Highest note"></select>
-      </span>
-    </span>
+    <div class="module" role="group" aria-labelledby="rangeLabel">
+      <span class="module-label" id="rangeLabel">Range</span>
+      <div class="module-row">
+        <label class="btn toggle"><input type="checkbox" id="autoRange">Auto</label>
+        <span class="range-notes" id="rangeNotes">
+          <select id="low" aria-label="Lowest note"></select>
+          <span class="dash">–</span>
+          <select id="high" aria-label="Highest note"></select>
+        </span>
+      </div>
+    </div>
 
-    <label>Window
+    <label class="module">
+      <span class="module-label">Window <output id="windowValue"></output></span>
       <input type="range" id="window" min="3" max="30" step="1">
-      <span class="window-value" id="windowValue"></span>
     </label>
 
-    <label class="gate">Gate
-      <input type="range" id="gate" min="-80" max="-20" step="1">
-      <span class="level" aria-hidden="true">
-        <span class="level-fill" id="levelFill"></span>
-        <span class="level-gate" id="levelGate"></span>
-      </span>
-      <span class="gate-value" id="gateValue"></span>
-    </label>
+    <div class="module">
+      <label class="module-label" for="gate">Gate <output id="gateValue"></output></label>
+      <div class="module-row">
+        <input type="range" id="gate" min="-80" max="-20" step="1">
+        <div class="leds level-leds" id="levelLeds" title="Input level; grey is below the gate"></div>
+      </div>
+    </div>
   </div>
 
   <main class="stage">

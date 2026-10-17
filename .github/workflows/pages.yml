@@ -21,8 +21,9 @@ jobs:
       # No build step: publish only the files the app needs.
       - name: Collect site files
         run: |
-          mkdir -p _site
+          mkdir -p _site/fonts
           cp -r index.html styles.css sw.js manifest.webmanifest src icons _site/
+          cp fonts/*.woff2 _site/fonts/
           touch _site/.nojekyll
 
       # The service worker caches the files it lists, for offline use. A file it misses

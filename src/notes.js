@@ -1,4 +1,5 @@
-const NAMES = ['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B'];
+// '#' rather than '♯': the pixel font has no sharp sign.
+const NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 const SHARPS = new Set([1, 3, 6, 8, 10]);
 
 export const A4 = 440;

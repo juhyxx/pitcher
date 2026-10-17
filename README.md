@@ -47,6 +47,8 @@ When adding a file, list it in `FILES` in `sw.js`.
   off to pick the lowest and highest note yourself.
 - Input device picker, time window slider (3–30 s), and a noise gate with a level meter.
 - Settings are remembered in `localStorage`.
+- Look borrowed from [metronome](https://github.com/juhyxx/metronome): dark hardware panel,
+  pixel font, LED meters for tuning and input level.
 
 ## Files
 
@@ -57,3 +59,4 @@ When adding a file, list it in `FILES` in `sw.js`.
 - `src/version.js`: version shown in the header (stamped on deploy)
 - `sw.js`: service worker (offline cache)
 - `icons/`, `assets/logo.svg`: app icons and logo
+- `fonts/`: [Silkscreen](https://github.com/googlefonts/silkscreen) pixel font, self-hosted for offline use (SIL OFL, see `fonts/OFL.txt`)

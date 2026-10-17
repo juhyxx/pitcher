@@ -7,6 +7,9 @@ const FFT_SIZE = 2048;
 const NOTE_MIN = 24;   // C1
 const NOTE_MAX = 96;   // C7
 const IDLE_AFTER_MS = 400;
+const CENTS_STEP = 5;      // one LED per 5 cents, −50 … +50
+const LEVEL_STEP = 5;      // one LED per 5 dB, −80 … 0 dB
+const LEVEL_FLOOR = -80;
 const SETTINGS_KEY = 'pitcher.settings';
 const DEFAULTS = { autoRange: true, low: 36, high: 84, window: 10, gate: -50, deviceId: '' };
 
@@ -22,15 +25,18 @@ const els = {
   windowValue: $('windowValue'),
   gate: $('gate'),
   gateValue: $('gateValue'),
-  levelFill: $('levelFill'),
-  levelGate: $('levelGate'),
+  levelLeds: $('levelLeds'),
   overlay: $('overlay'),
   readout: $('readout'),
   note: $('note'),
   freq: $('freq'),
   cents: $('cents'),
-  needle: $('needle'),
+  centsLeds: $('centsLeds'),
 };
+
+const centsLeds = makeLeds(els.centsLeds, 100 / CENTS_STEP + 1);
+const centsZero = centsLeds.length >> 1;
+const levelLeds = makeLeds(els.levelLeds, -LEVEL_FLOOR / LEVEL_STEP);
 
 const settings = loadSettings();
 const graph = new PitchGraph($('graph'));
@@ -70,7 +76,8 @@ function applySettings() {
   els.windowValue.textContent = `${settings.window} s`;
   els.gate.value = settings.gate;
   els.gateValue.textContent = `${settings.gate} dB`;
-  els.levelGate.style.left = `${dbToPercent(settings.gate)}%`;
+  setFill(els.window);
+  setFill(els.gate);
   graph.render();
 }
 
@@ -162,7 +169,8 @@ function stop() {
   }
   els.toggle.textContent = 'Start';
   els.toggle.classList.remove('running');
-  els.levelFill.style.width = '0';
+  showLevel(-Infinity);
+  showCents(null);
   els.readout.classList.add('idle');
 }
 
@@ -183,8 +191,7 @@ function tick() {
   for (let i = 0; i < buf.length; i++) sumSq += buf[i] * buf[i];
   const db = 20 * Math.log10(Math.sqrt(sumSq / buf.length) || 1e-10);
   const open = db >= settings.gate;
-  els.levelFill.style.width = `${dbToPercent(db)}%`;
-  els.levelFill.classList.toggle('open', open);
+  showLevel(db);
 
   let raw = null;
   if (open) {
@@ -210,27 +217,56 @@ function smooth(raw) {
 
 function updateReadout(midi, now) {
   if (midi == null) {
-    if (now - lastVoiced > IDLE_AFTER_MS) els.readout.classList.add('idle');
+    if (now - lastVoiced > IDLE_AFTER_MS && !els.readout.classList.contains('idle')) {
+      els.readout.classList.add('idle');
+      showCents(null);
+    }
     return;
   }
   lastVoiced = now;
   const nearest = Math.round(midi);
   const cents = Math.round((midi - nearest) * 100);
-  const abs = Math.abs(cents);
 
   els.readout.classList.remove('idle');
   els.note.textContent = noteName(nearest);
   els.freq.textContent = `${midiToFreq(midi).toFixed(1)} Hz`;
-  els.cents.textContent = `${cents > 0 ? '+' : cents < 0 ? '−' : '±'}${abs}¢`;
-  els.needle.style.left = `${50 + cents}%`;
-  els.needle.classList.toggle('warn', abs > 10 && abs <= 25);
-  els.needle.classList.toggle('bad', abs > 25);
+  els.cents.textContent = `${cents > 0 ? '+' : cents < 0 ? '−' : '±'}${Math.abs(cents)}¢`;
+  showCents(cents);
 }
 
 // ---------------------------------------------------------------- UI
 
-function dbToPercent(db) {
-  return Math.max(0, Math.min(100, ((db + 80) / 80) * 100)); // -80 dB .. 0 dB
+function makeLeds(container, count) {
+  for (let i = 0; i < count; i++) container.append(document.createElement('span'));
+  return [...container.children];
+}
+
+function setLed(led, cls) {
+  if (led.className !== cls) led.className = cls;
+}
+
+/** Lights the LED nearest to `cents` (null: all off), coloured by how far off it is. */
+function showCents(cents) {
+  const lit = cents == null ? -1 : centsZero + Math.round(cents / CENTS_STEP);
+  const abs = Math.abs(cents ?? 0);
+  const tone = abs <= 10 ? 'good' : abs <= 25 ? 'warn' : 'bad';
+  centsLeds.forEach((led, i) => setLed(led, [i === centsZero && 'center', i === lit && `on ${tone}`].filter(Boolean).join(' ')));
+}
+
+/** Level meter: LEDs below the gate light grey, the top ones yellow and red. */
+function showLevel(db) {
+  levelLeds.forEach((led, i) => {
+    const ledDb = LEVEL_FLOOR + i * LEVEL_STEP;
+    let cls = '';
+    if (db > ledDb) cls = ledDb < settings.gate ? 'on dim' : ledDb >= -10 ? 'on bad' : ledDb >= -20 ? 'on warn' : 'on good';
+    setLed(led, cls);
+  });
+}
+
+/** Lights the slider groove up to its value. */
+function setFill(input) {
+  const pct = ((input.value - input.min) / (input.max - input.min)) * 100;
+  input.style.setProperty('--pct', `${pct}%`);
 }
 
 function showOverlay(message, isError = false) {
@@ -300,7 +336,10 @@ document.querySelector('.brand').title = `Pitcher ${VERSION}`;
 
 fillNoteSelects();
 applySettings();
+showCents(null);
 refreshDevices();
+// The canvas only uses the pixel font once it has loaded.
+document.fonts?.load('10px Silkscreen').then(() => graph.render());
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
