@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pitcher</title>
+  <link rel="stylesheet" href="styles.css">
+  <script type="module" src="src/main.js"></script>
+</head>
+<body>
+  <header class="top">
+    <h1>Pitcher</h1>
+    <div class="readout idle" id="readout" aria-live="polite">
+      <span class="note" id="note">–</span>
+      <span class="freq" id="freq">— Hz</span>
+      <div class="cents" title="Deviation from the nearest note in cents">
+        <div class="cents-track"><div class="cents-needle" id="needle"></div></div>
+        <span class="cents-value" id="cents">±0¢</span>
+      </div>
+    </div>
+  </header>
+
+  <div class="toolbar">
+    <button id="toggle" class="primary" type="button">Start</button>
+
+    <label>Input
+      <select id="device"><option value="">System default</option></select>
+    </label>
+
+    <label>Range
+      <select id="low" aria-label="Lowest note"></select>
+      <span class="dash">–</span>
+      <select id="high" aria-label="Highest note"></select>
+    </label>
+
+    <label>Window
+      <select id="window">
+        <option value="5">5 s</option>
+        <option value="10">10 s</option>
+        <option value="20">20 s</option>
+        <option value="30">30 s</option>
+      </select>
+    </label>
+
+    <label class="check"><input type="checkbox" id="snap"> Snap to notes</label>
+
+    <label class="gate">Gate
+      <input type="range" id="gate" min="-80" max="-20" step="1">
+      <span class="level" aria-hidden="true">
+        <span class="level-fill" id="levelFill"></span>
+        <span class="level-gate" id="levelGate"></span>
+      </span>
+      <span class="gate-value" id="gateValue"></span>
+    </label>
+  </div>
+
+  <main class="stage">
+    <canvas id="graph"></canvas>
+    <div class="overlay" id="overlay"><p>Press <b>Start</b> (or Space) and allow microphone access.</p></div>
+  </main>
+</body>
+</html>
