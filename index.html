@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pitcher</title>
+  <meta name="description" content="Real-time pitch tracker: sing or play and see every note on a scrolling graph.">
+  <meta name="theme-color" content="#1c1c1c">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="preload" href="fonts/Silkscreen-Regular.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="styles.css?v=98b19c1">
+  <script type="module" src="src/main.js?v=98b19c1"></script>
+</head>
+<body>
+  <header class="top">
+    <h1 class="brand">
+      <img class="brand-mark" src="icons/icon.svg" alt="">
+      <svg class="brand-word" viewBox="0 12 430 122" role="img" aria-label="Pitcher">
+        <g fill="none" stroke="currentColor" stroke-width="12" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M6 44V128"/>
+          <circle cx="34" cy="72" r="28"/>
+          <path d="M86 44V100"/>
+          <path d="M120 26V84a16 16 0 0 0 16 16M108 48H134"/>
+          <path d="M207.8 52.2A28 28 0 1 0 207.8 91.8"/>
+          <path d="M230 20V100M230 72a28 28 0 0 1 56 0V100"/>
+          <path d="M310 72H366A28 28 0 1 0 357.8 91.8"/>
+          <path d="M390 100V44M390 72a28 28 0 0 1 28-28H424"/>
+        </g>
+        <circle class="brand-dot" cx="86" cy="22" r="10"/>
+      </svg>
+    </h1>
+
+    <div class="readout idle" id="readout" aria-live="polite">
+      <div class="lcd"><span class="note" id="note">--</span></div>
+      <div class="readout-side">
+        <span class="freq" id="freq">--- Hz</span>
+        <div class="leds cents-leds" id="centsLeds" title="Deviation from the nearest note, −50 to +50 cents"></div>
+        <span class="cents-value" id="cents">±0¢</span>
+      </div>
+    </div>
+  </header>
+
+  <div class="toolbar">
+    <button id="toggle" class="btn start" type="button">Start</button>
+
+    <label class="module">
+      <span class="module-label">Input</span>
+      <select id="device"><option value="">System default</option></select>
+    </label>
+
+    <div class="module" role="group" aria-labelledby="rangeLabel">
+      <span class="module-label" id="rangeLabel">Range</span>
+      <div class="module-row">
+        <label class="btn toggle"><input type="checkbox" id="autoRange">Auto</label>
+        <span class="range-notes" id="rangeNotes">
+          <select id="low" aria-label="Lowest note"></select>
+          <span class="dash">–</span>
+          <select id="high" aria-label="Highest note"></select>
+        </span>
+      </div>
+    </div>
+
+    <label class="module">
+      <span class="module-label">Window <output id="windowValue"></output></span>
+      <input type="range" id="window" min="3" max="30" step="1">
+    </label>
+
+    <div class="module">
+      <label class="module-label" for="gate">Gate <output id="gateValue"></output></label>
+      <div class="module-row">
+        <input type="range" id="gate" min="-80" max="-20" step="1">
+        <div class="leds level-leds" id="levelLeds" title="Input level; grey is below the gate"></div>
+      </div>
+    </div>
+  </div>
+
+  <main class="stage">
+    <canvas id="graph"></canvas>
+    <div class="overlay" id="overlay"><p>Press <b>Start</b> (or Space) and allow microphone access.</p></div>
+  </main>
+</body>
+</html>

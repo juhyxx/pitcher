@@ -1,0 +1,293 @@
+/* Look and feel borrowed from ../metronome: a dark hardware panel, pixel font,
+   recessed screens and glowing LED colours. */
+
+@font-face {
+  font-family: "Silkscreen";
+  src: url(fonts/Silkscreen-Regular.woff2) format("woff2");
+  font-display: swap;
+}
+
+:root {
+  --led: hsl(84, 100%, 59%);
+  --led-warn: hsl(45, 100%, 59%);   /* amber rather than the metronome's yellow, so it reads apart from lime */
+  --led-bad: hsl(0, 100%, 59%);
+  --led-off: rgba(255, 255, 255, 0.07);
+  --led-dim: rgba(255, 255, 255, 0.35);
+
+  --panel: hsl(170, 0%, 15%);
+  --screen: #0e0f0d;
+  --text: rgba(255, 255, 255, 0.8);
+  --muted: rgba(255, 255, 255, 0.5);
+  --faint: rgba(255, 255, 255, 0.3);
+
+  /* canvas colours, read by graph.js */
+  --plot-gutter: rgba(0, 0, 0, 0.35);
+  --plot-band: rgba(0, 0, 0, 0.28);
+  --plot-line: rgba(255, 255, 255, 0.06);
+  --plot-line-strong: rgba(255, 255, 255, 0.22);
+  --plot-label: rgba(255, 255, 255, 0.3);
+  --plot-label-strong: rgba(255, 255, 255, 0.75);
+  --plot-time: rgba(255, 255, 255, 0.04);
+
+  --bg-grad: radial-gradient(farthest-corner at right bottom, rgba(0, 0, 0, 0.967) 0%, rgba(0, 0, 0, 0.3) 70%, transparent 70%),
+    radial-gradient(circle, transparent 49%, rgba(0, 0, 0, 1) 100%);
+  --bg-button: linear-gradient(0deg, rgba(0, 0, 0, 0.2) 49%, rgba(255, 255, 255, 0.05) 50%, transparent 100%);
+  --raised: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 1px 1px rgba(255, 255, 255, 0.05), 0 2px 6px rgba(0, 0, 0, 0.5);
+  --sunken: inset 0 0 1px 1px rgba(0, 0, 0, 0.5), inset -1px -1px 1px 0 rgba(255, 255, 255, 0.15),
+    inset 0 0 30px rgba(0, 0, 0, 0.5);
+  --screen-shadow: inset 0 0 1px 1px rgba(0, 0, 0, 0.6), inset -1px -1px 1px 0 rgba(255, 255, 255, 0.2),
+    inset 0 0 60px rgba(0, 0, 0, 0.6);
+
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+
+html, body { height: 100%; margin: 0; }
+
+body {
+  display: flex;
+  flex-direction: column;
+  background-color: var(--panel);
+  background-image: var(--bg-grad);
+  color: var(--text);
+  font: 12px/1.4 "Silkscreen", ui-monospace, monospace;
+  text-shadow: 0 -1px 1px black;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ------------------------------------------------------------- header */
+
+.top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 20px 12px;
+}
+
+.brand { display: flex; align-items: center; gap: 10px; margin: 0; font-size: inherit; }
+.brand-mark { width: 30px; height: 30px; filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.6)); }
+.brand-word { width: auto; height: 24px; aspect-ratio: 430 / 122; color: var(--text); filter: drop-shadow(0 -1px 1px black); }
+.brand-dot { fill: var(--led); filter: drop-shadow(0 0 6px var(--led)); }
+
+.readout { display: flex; align-items: center; gap: 14px; }
+
+.lcd {
+  min-width: 4.4em;
+  padding: 4px 14px 2px;
+  border-radius: 10px;
+  background: var(--screen);
+  box-shadow: var(--screen-shadow);
+  font-size: 40px;
+  line-height: 1.2;
+  text-align: center;
+}
+.note {
+  color: var(--led);
+  text-shadow: 0 0 6px var(--led), 0 0 22px hsla(84, 100%, 59%, 0.45);
+  transition: color 0.2s, text-shadow 0.2s;
+}
+.idle .note { color: hsla(84, 100%, 59%, 0.15); text-shadow: none; }
+
+.readout-side {
+  display: grid;
+  grid-template-areas: "freq cents" "leds leds";
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 8px 12px;
+  font-variant-numeric: tabular-nums;
+}
+.freq { grid-area: freq; color: var(--muted); }
+.cents-value { grid-area: cents; color: var(--muted); text-align: right; }
+.cents-leds { grid-area: leds; }
+.idle .freq, .idle .cents-value { color: var(--faint); }
+
+/* LED bars: cents deviation and input level */
+
+.leds { display: flex; gap: 2px; }
+.leds span {
+  width: 5px;
+  height: 12px;
+  border-radius: 1px;
+  background: var(--led-off);
+  box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.6);
+}
+.cents-leds span.center { background: rgba(255, 255, 255, 0.18); }
+.leds span.on { background: var(--c); box-shadow: 0 0 6px var(--c); }
+.leds span.good { --c: var(--led); }
+.leds span.warn { --c: var(--led-warn); }
+.leds span.bad { --c: var(--led-bad); }
+.leds span.dim { --c: var(--led-dim); box-shadow: none; }
+
+/* ------------------------------------------------------------- toolbar */
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 14px 24px;
+  padding: 4px 20px 16px;
+}
+
+.module { display: flex; flex-direction: column; gap: 6px; }
+.module-row { display: flex; align-items: center; gap: 10px; min-height: 36px; }
+.module-label { color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; }
+.module-label output { margin-left: 4px; color: var(--text); }
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 2rem;
+  background: var(--bg-button);
+  box-shadow: var(--raised);
+  color: var(--text);
+  font: inherit;
+  text-transform: uppercase;
+  text-shadow: inherit;
+  cursor: pointer;
+  user-select: none;
+}
+.btn:hover { background-color: rgba(0, 0, 0, 0.5); }
+.btn:focus-visible, .toggle:has(input:focus-visible) { outline: 1px solid var(--led); outline-offset: 2px; }
+
+/* the "lit" state, as for selected buttons on the metronome */
+.btn.running, .toggle:has(input:checked) {
+  background: transparent;
+  box-shadow: var(--sunken);
+  color: var(--led);
+  text-shadow: 0 0 5px var(--led);
+}
+
+.start { min-width: 120px; min-height: 44px; font-size: 14px; }
+.start::before { /* play triangle, a stop square while running */
+  content: "";
+  width: 10px;
+  height: 12px;
+  background: currentColor;
+  clip-path: polygon(0 0, 100% 50%, 0 100%);
+  filter: drop-shadow(0 0 3px currentColor);
+}
+.start.running::before { width: 10px; height: 10px; clip-path: none; }
+
+.toggle input { position: absolute; opacity: 0; pointer-events: none; }
+
+select {
+  appearance: none;
+  min-height: 36px;
+  max-width: 220px;
+  padding: 0 30px 0 14px;
+  border: 0;
+  border-radius: 2rem;
+  background: var(--screen) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0h10L5 6z' fill='%23999'/%3E%3C/svg%3E") no-repeat right 12px center;
+  box-shadow: var(--sunken);
+  color: var(--text);
+  font: inherit;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+select:focus-visible { outline: 1px solid var(--led); outline-offset: 2px; }
+option { background: #1c1c1c; color: #ddd; }
+
+.range-notes { display: inline-flex; align-items: center; gap: 6px; }
+.range-notes[hidden] { display: none; }
+.dash { color: var(--muted); }
+
+/* sliders: a dark groove that lights up to the value, and a knob */
+
+input[type="range"] {
+  --pct: 50%;
+  appearance: none;
+  width: 130px;
+  height: 36px;
+  margin: 0;
+  background: transparent;
+  cursor: pointer;
+}
+input[type="range"]:focus-visible { outline: 1px solid var(--led); outline-offset: 2px; border-radius: 4px; }
+input[type="range"]::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 3px;
+  background: linear-gradient(to right, hsla(84, 100%, 59%, 0.85) var(--pct), #0a0a0a var(--pct));
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.9), 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+input[type="range"]::-webkit-slider-thumb {
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  margin-top: -6px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 35%, #5a5a5a, #222 70%);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6), 0 2px 5px rgba(0, 0, 0, 0.8), inset 0 1px 1px rgba(255, 255, 255, 0.3);
+}
+input[type="range"]::-moz-range-track {
+  height: 6px;
+  border-radius: 3px;
+  background: #0a0a0a;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.9), 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+input[type="range"]::-moz-range-progress { height: 6px; border-radius: 3px; background: hsla(84, 100%, 59%, 0.85); }
+input[type="range"]::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 35%, #5a5a5a, #222 70%);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6), 0 2px 5px rgba(0, 0, 0, 0.8), inset 0 1px 1px rgba(255, 255, 255, 0.3);
+}
+
+/* ------------------------------------------------------------- graph */
+
+.stage {
+  position: relative;
+  flex: 1;
+  min-height: 240px;
+  margin: 0 20px 20px;
+  overflow: hidden;
+  border-radius: 14px;
+  background: var(--screen);
+  box-shadow: var(--screen-shadow);
+}
+
+#graph { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
+
+/* faint scanlines over the screen */
+.stage::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(transparent 0 2px, rgba(0, 0, 0, 0.12) 2px 3px);
+  pointer-events: none;
+}
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  color: var(--faint);
+  text-align: center;
+  text-transform: uppercase;
+  pointer-events: none;
+}
+.overlay p { margin: 0; max-width: 32em; }
+.overlay b { font-weight: inherit; color: var(--led); text-shadow: 0 0 5px var(--led); }
+.overlay.error { color: var(--led-bad); }
+.overlay[hidden] { display: none; }
+
+@media (max-width: 640px) {
+  .top { flex-wrap: wrap; gap: 10px; padding: 12px 12px 6px; }
+  .lcd { font-size: 32px; }
+  .toolbar { gap: 10px 16px; padding: 4px 12px 10px; }
+  .module { gap: 4px; }
+  .stage { margin: 0 8px 8px; border-radius: 10px; }
+  input[type="range"] { width: 110px; }
+}
