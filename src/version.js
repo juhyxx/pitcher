@@ -1,3 +1,2 @@
-// Overwritten by scripts/build.js with "<package version>+<content hash>".
-// 'dev' means an unbuilt checkout: the service worker is not registered.
+// The deploy (.github/workflows/pages.yml) replaces 'dev' with the commit hash.
 export const VERSION = 'dev';

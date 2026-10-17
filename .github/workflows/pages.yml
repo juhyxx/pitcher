@@ -1,0 +1,74 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      # No build step: publish only the files the app needs.
+      - name: Collect site files
+        run: |
+          mkdir -p _site
+          cp -r index.html styles.css sw.js manifest.webmanifest src icons _site/
+          touch _site/.nojekyll
+
+      # The service worker caches the files it lists, for offline use. A file it misses
+      # won't work offline; a listed file that doesn't exist stops it from installing at all.
+      - name: Check the service worker's file list
+        working-directory: _site
+        run: |
+          ok=1
+          for f in $(find . -type f ! -name index.html ! -name sw.js ! -name .nojekyll | sed 's#^\./##' | sort); do
+            grep -q "'$f'" sw.js || { echo "::error::sw.js doesn't list $f"; ok=0; }
+          done
+          for f in $(grep -oE "^  '[^']+'" sw.js | tr -d " '"); do
+            [ "$f" = ./ ] || [ -f "$f" ] || { echo "::error::sw.js lists $f, which doesn't exist"; ok=0; }
+          done
+          [ $ok = 1 ]
+
+      # Cache busting: each deploy's version is its commit hash. It goes on the styles.css and
+      # src/*.js URLs (and the modules' imports of each other) as ?v=<hash> and names the service
+      # worker's cache, so browsers fetch the new files instead of mixing a new page with old
+      # scripts from their cache.
+      - name: Stamp the version
+        working-directory: _site
+        run: |
+          v="${GITHUB_SHA::7}"
+          sed -i -E \
+            -e "s#([\"'])(styles\.css|src/[A-Za-z0-9._/-]+\.js)([\"'])#\1\2?v=$v\3#g" \
+            -e "s#( from '\./[A-Za-z0-9._/-]+\.js)'#\1?v=$v'#g" \
+            index.html sw.js src/*.js
+          sed -i "s/^const VERSION = 'dev';/const VERSION = '$v';/" sw.js
+          sed -i "s/^export const VERSION = 'dev';/export const VERSION = '$v';/" src/version.js
+          grep -q "^const VERSION = '$v';" sw.js
+          grep -q "^export const VERSION = '$v';" src/version.js
+          grep -q "src/main.js?v=$v" index.html
+          if grep -nE "from ['\"][^'\"]+\.js['\"]" src/*.js; then
+            echo "::error::these imports weren't stamped with ?v=$v"; exit 1
+          fi
+
+      # Replace gh-pages with a single fresh commit; Pages serves that branch.
+      - name: Push to gh-pages
+        working-directory: _site
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git init -b gh-pages
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Deploy ${GITHUB_SHA}"
+          git push --force "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" gh-pages

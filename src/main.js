@@ -1,7 +1,6 @@
 import { PitchGraph } from './graph.js';
 import { freqToMidi, midiToFreq, noteName } from './notes.js';
 import { createYinDetector } from './pitch.js';
-import { setupPwa } from './pwa.js';
 import { VERSION } from './version.js';
 
 const FFT_SIZE = 2048;
@@ -287,9 +286,12 @@ document.addEventListener('keydown', (e) => {
 
 navigator.mediaDevices?.addEventListener?.('devicechange', refreshDevices);
 
-els.version.textContent = VERSION === 'dev' ? 'dev' : `v${VERSION.replace('+', ' · ')}`;
+els.version.textContent = VERSION;
 
 fillNoteSelects();
 applySettings();
 refreshDevices();
-setupPwa();
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+}

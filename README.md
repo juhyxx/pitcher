@@ -8,41 +8,35 @@ every horizontal line is one semitone. Installable as a PWA and works offline.
 
 ## Develop
 
-No dependencies. Browsers only allow microphone access and ES modules from
-`http://localhost` or `https://`, so serve the folder rather than opening the file:
+No dependencies and no build step. Browsers only allow microphone access and ES
+modules from `http://localhost` or `https://`, so serve the folder rather than
+opening the file:
 
 ```sh
-npm run dev        # or: python3 -m http.server 8000
+python3 -m http.server 8000
 ```
 
-Then open <http://localhost:8000> and press **Start** (or Space). The unbuilt source
-reports its version as `dev` and does not register the service worker, so there
-is no caching to fight while editing.
+Then open <http://localhost:8000> and press **Start** (or Space). Locally the version
+is `dev` and the service worker fetches everything from the network first, so edits
+show up on reload.
 
-## Build and versioning
+## Deploy and versioning
 
-```sh
-npm run build      # writes dist/
-npm run preview    # build, then serve dist/ on :8000
-```
+Every push to `main` runs [`.github/workflows/pages.yml`](.github/workflows/pages.yml),
+the same setup as [dots](https://github.com/juhyxx/dots):
 
-`scripts/build.js` copies the app into `dist/` and stamps a version of the form
-`<package.json version>+<content hash>`, for example `1.0.0+1ef02b15`:
+1. Copies the published files to `_site/`.
+2. Fails if `sw.js` doesn't list every published file (or lists one that doesn't exist).
+3. Stamps the version, the short commit hash: `?v=<hash>` goes on the `styles.css` and
+   `src/*.js` URLs in `index.html` and `sw.js` and on the modules' imports of each other,
+   and `VERSION` in `sw.js` and `src/version.js` (shown next to the logo).
+4. Force-pushes the result as a single commit to the `gh-pages` branch.
 
-- `dist/src/version.js` gets the version (shown next to the logo).
-- `dist/sw.js` is generated from `sw.js` with that version as its cache name and
-  the list of files to precache.
+Because each deploy changes `sw.js`, browsers install the new worker, which caches that
+version's files and deletes the old cache. The page is always fetched from the network
+first, so a new deploy shows up on the next start; offline, everything comes from the cache.
 
-Any change to a shipped file changes the hash, so browsers see a new service
-worker, install it in the background and show a **Reload** prompt; the old cache
-is deleted once the new version takes over. An unchanged tree always builds to
-the same version. Bump `version` in `package.json` for releases.
-
-## Deploy
-
-Every push to `main` runs [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml),
-which builds and publishes `dist/` to GitHub Pages. One-time setup: in the repo's
-**Settings → Pages**, set **Source** to **GitHub Actions**.
+When adding a file, list it in `FILES` in `sw.js`.
 
 ## Features
 
@@ -58,7 +52,6 @@ which builds and publishes `dist/` to GitHub Pages. One-time setup: in the repo'
 - `src/graph.js`: canvas renderer for the scrolling graph
 - `src/notes.js`: frequency/MIDI/note-name helpers
 - `src/main.js`: microphone setup, detection loop, UI wiring
-- `src/pwa.js`: service worker registration and update prompt
-- `sw.js`: service worker template (filled in by the build)
-- `scripts/build.js`: build and versioning
+- `src/version.js`: version shown in the header (stamped on deploy)
+- `sw.js`: service worker (offline cache)
 - `icons/`, `assets/logo.svg`: app icons and logo
