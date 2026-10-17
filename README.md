@@ -46,7 +46,7 @@ When adding a file, list it in `FILES` in `sw.js`.
 - **Auto range** (default) shows the octave you're singing in, grows as soon as a note
   on screen falls outside it, and zooms back in once those notes scroll away. Turn it
   off to pick the lowest and highest note yourself.
-- Input device picker, time window (5–30 s), and a noise gate with a level meter.
+- Input device picker, time window slider (3–30 s), and a noise gate with a level meter.
 - Settings are remembered in `localStorage`.
 
 ## Files

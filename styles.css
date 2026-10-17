@@ -76,7 +76,6 @@ body {
 .brand-mark { width: 28px; height: 28px; }
 .brand-word { width: auto; height: 24px; aspect-ratio: 430 / 122; color: var(--text); }
 .brand-dot { fill: var(--accent); }
-.version { font-size: 11px; font-weight: 400; color: var(--muted); }
 
 .readout {
   display: flex;
@@ -133,10 +132,9 @@ body {
   color: var(--muted);
 }
 
-.toolbar label, .toolbar .range { display: inline-flex; align-items: center; gap: 6px; }
+.toolbar label, .toolbar .range, .range-notes { display: inline-flex; align-items: center; gap: 6px; }
+.range-notes[hidden] { display: none; }
 .toolbar .dash { color: var(--muted); }
-
-select:disabled { opacity: 0.6; }
 
 select, button {
   font: inherit;
@@ -174,6 +172,7 @@ input[type="range"] { width: 110px; }
 .level-fill.open { background: var(--good); }
 .level-gate { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--text); }
 .gate-value { min-width: 4.5em; font-variant-numeric: tabular-nums; }
+.window-value { min-width: 2.5em; font-variant-numeric: tabular-nums; }
 
 /* Graph */
 

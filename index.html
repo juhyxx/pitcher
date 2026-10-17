@@ -30,7 +30,6 @@
         </g>
         <circle class="brand-dot" cx="86" cy="22" r="10"/>
       </svg>
-      <span class="version" id="version"></span>
     </h1>
     <div class="readout idle" id="readout" aria-live="polite">
       <span class="note" id="note">–</span>
@@ -51,18 +50,16 @@
 
     <span class="range">Range
       <label class="check"><input type="checkbox" id="autoRange"> Auto</label>
-      <select id="low" aria-label="Lowest note"></select>
-      <span class="dash">–</span>
-      <select id="high" aria-label="Highest note"></select>
+      <span class="range-notes" id="rangeNotes">
+        <select id="low" aria-label="Lowest note"></select>
+        <span class="dash">–</span>
+        <select id="high" aria-label="Highest note"></select>
+      </span>
     </span>
 
     <label>Window
-      <select id="window">
-        <option value="5">5 s</option>
-        <option value="10">10 s</option>
-        <option value="20">20 s</option>
-        <option value="30">30 s</option>
-      </select>
+      <input type="range" id="window" min="3" max="30" step="1">
+      <span class="window-value" id="windowValue"></span>
     </label>
 
     <label class="check"><input type="checkbox" id="snap"> Snap to notes</label>

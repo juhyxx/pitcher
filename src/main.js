@@ -15,9 +15,11 @@ const els = {
   toggle: $('toggle'),
   device: $('device'),
   autoRange: $('autoRange'),
+  rangeNotes: $('rangeNotes'),
   low: $('low'),
   high: $('high'),
   window: $('window'),
+  windowValue: $('windowValue'),
   snap: $('snap'),
   gate: $('gate'),
   gateValue: $('gateValue'),
@@ -29,7 +31,6 @@ const els = {
   freq: $('freq'),
   cents: $('cents'),
   needle: $('needle'),
-  version: $('version'),
 };
 
 const settings = loadSettings();
@@ -64,10 +65,11 @@ function applySettings() {
   graph.windowMs = settings.window * 1000;
   graph.snap = settings.snap;
   els.autoRange.checked = settings.autoRange;
-  els.low.disabled = els.high.disabled = settings.autoRange;
+  els.rangeNotes.hidden = settings.autoRange;
   els.low.value = graph.low;
   els.high.value = graph.high;
   els.window.value = settings.window;
+  els.windowValue.textContent = `${settings.window} s`;
   els.snap.checked = settings.snap;
   els.gate.value = settings.gate;
   els.gateValue.textContent = `${settings.gate} dB`;
@@ -260,7 +262,7 @@ els.device.addEventListener('change', () => {
   restart();
 });
 
-// In auto mode the selects just show the range the graph picked.
+// Keep the (hidden) selects in step with auto mode, so switching it off starts from there.
 graph.onRangeChange = (low, high) => {
   els.low.value = low;
   els.high.value = high;
@@ -277,7 +279,7 @@ els.autoRange.addEventListener('change', () => {
 els.low.addEventListener('change', () => onRangeChange('low'));
 els.high.addEventListener('change', () => onRangeChange('high'));
 
-els.window.addEventListener('change', () => {
+els.window.addEventListener('input', () => {
   settings.window = Number(els.window.value);
   saveSettings();
   applySettings();
@@ -303,7 +305,7 @@ document.addEventListener('keydown', (e) => {
 
 navigator.mediaDevices?.addEventListener?.('devicechange', refreshDevices);
 
-els.version.textContent = VERSION;
+document.querySelector('.brand').title = `Pitcher ${VERSION}`;
 
 fillNoteSelects();
 applySettings();
