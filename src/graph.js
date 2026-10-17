@@ -5,22 +5,37 @@ const HISTORY_MS = 31000;   // keep enough for the largest window option
 const MAX_GAP_MS = 120;     // longer gaps between frames break the trace
 const LABEL_MIN_ROW = 12;   // below this row height only C notes get labels
 const RIGHT_PAD = 12;       // px between "now" and the right edge
+const NOTE_MIN = 24;        // C1, lowest note the range can reach
+const NOTE_MAX = 96;        // C7
+const AUTO_SPAN = 12;       // auto range shows at least one octave
+const SETTLE_DELAY_MS = 1500; // a new auto target must hold this long before the view moves
+const EASE_MS = 120;        // time constant of the range animation
 
 /**
  * Scrolling pitch-over-time plot. Each horizontal line is one semitone; the
  * newest sample sits at the right edge and older ones scroll off to the left.
+ *
+ * With `auto` on, the range follows the singer: it shows the C-to-C octave of
+ * the current note, grows at once when a visible note falls outside it, and
+ * zooms back in once the outlying notes have scrolled away.
  */
 export class PitchGraph {
   constructor(canvas) {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d');
     this.history = [];
-    this.low = 36;
-    this.high = 84;
+    this.low = 60;
+    this.high = 72;
+    this.view = { low: this.low, high: this.high }; // animated towards low/high
+    this.auto = true;
+    this.onRangeChange = null;
     this.windowMs = 10000;
     this.snap = false;
     this.t0 = performance.now();
     this.now = this.t0;
+    this.lastRender = 0;
+    this.voiced = false;      // seen a note since reset(); the first one sets the range at once
+    this.settleSince = null;
 
     this.readColors();
     this.resize();
@@ -69,6 +84,65 @@ export class PitchGraph {
     this.history = [];
     this.t0 = now;
     this.now = now;
+    this.voiced = false;
+    this.settleSince = null;
+  }
+
+  setRange(low, high) {
+    low = Math.max(NOTE_MIN, low);
+    high = Math.min(NOTE_MAX, high);
+    if (low === this.low && high === this.high) return;
+    this.low = low;
+    this.high = high;
+    this.onRangeChange?.(low, high);
+  }
+
+  updateAutoRange() {
+    const from = this.now - this.windowMs;
+    let lo = Infinity;
+    let hi = -Infinity;
+    let current = null;
+    for (const p of this.history) {
+      if (p.t < from || p.midi == null) continue;
+      current = Math.round(p.midi);
+      lo = Math.min(lo, current);
+      hi = Math.max(hi, current);
+    }
+    if (current == null) return; // nothing on screen: keep what we have
+
+    const octave = 12 * Math.floor(current / 12);
+    const targetLow = Math.min(lo, octave);
+    const targetHigh = Math.max(hi, octave + AUTO_SPAN);
+
+    if (!this.voiced) {
+      this.voiced = true;
+      this.setRange(targetLow, targetHigh);
+    } else if (lo < this.low || hi > this.high) {
+      this.settleSince = null;
+      this.setRange(Math.min(lo, this.low), Math.max(hi, this.high));
+    } else if (targetLow !== this.low || targetHigh !== this.high) {
+      // Wait before moving to the current octave, so hovering around a C
+      // doesn't flip the view back and forth.
+      this.settleSince ??= this.now;
+      if (this.now - this.settleSince >= SETTLE_DELAY_MS) {
+        this.settleSince = null;
+        this.setRange(targetLow, targetHigh);
+      }
+    } else {
+      this.settleSince = null;
+    }
+  }
+
+  /** Eases the drawn range towards low/high; jumps there when not animating. */
+  stepView() {
+    const t = performance.now();
+    const dt = t - this.lastRender;
+    this.lastRender = t;
+    const k = dt > 200 ? 1 : 1 - Math.exp(-dt / EASE_MS);
+    for (const key of ['low', 'high']) {
+      this.view[key] += (this[key] - this.view[key]) * k;
+      if (Math.abs(this[key] - this.view[key]) < 0.01) this.view[key] = this[key];
+    }
   }
 
   /** Append one frame. `midi` is a fractional MIDI note number or null for silence. */
@@ -84,12 +158,19 @@ export class PitchGraph {
   }
 
   render() {
-    const { ctx, w, h, colors, low, high } = this;
+    const { ctx, w, h, colors } = this;
     if (!w || !h) return;
+
+    if (this.auto) this.updateAutoRange();
+    this.stepView();
+    const { low, high } = this.view;
 
     const plotW = w - GUTTER;
     const rowH = h / (high - low + 1);
     const y = (m) => (high + 0.5 - m) * rowH;
+    // Integer notes to draw; one extra each side so rows slide in while animating.
+    const first = Math.floor(low) - 1;
+    const last = Math.ceil(high) + 1;
     const pxPerMs = (plotW - RIGHT_PAD) / this.windowMs;
     const x = (t) => w - RIGHT_PAD - (this.now - t) * pxPerMs;
     const current = this.latest;
@@ -100,7 +181,7 @@ export class PitchGraph {
 
     // Darker bands on sharps, piano-roll style.
     ctx.fillStyle = colors.band;
-    for (let m = low; m <= high; m++) {
+    for (let m = first; m <= last; m++) {
       if (!isSharp(m)) continue;
       ctx.fillRect(GUTTER, y(m) - rowH / 2, plotW, rowH);
     }
@@ -109,7 +190,7 @@ export class PitchGraph {
 
     // One line per semitone; C lines are emphasised as octave markers.
     ctx.lineWidth = 1;
-    for (let m = low; m <= high; m++) {
+    for (let m = first; m <= last; m++) {
       const py = Math.round(y(m)) + 0.5;
       ctx.strokeStyle = isC(m) ? colors.lineStrong : colors.line;
       ctx.beginPath();
@@ -119,7 +200,7 @@ export class PitchGraph {
     }
 
     this.drawTrace(x, y);
-    this.drawLabels(y, rowH, currentRow);
+    this.drawLabels(y, rowH, currentRow, first, last);
   }
 
   drawTimeGrid(pxPerMs, x) {
@@ -201,14 +282,14 @@ export class PitchGraph {
     ctx.restore();
   }
 
-  drawLabels(y, rowH, currentRow) {
-    const { ctx, h, colors, low, high } = this;
+  drawLabels(y, rowH, currentRow, first, last) {
+    const { ctx, h, colors } = this;
     ctx.fillStyle = colors.gutter;
     ctx.fillRect(0, 0, GUTTER, h);
 
     ctx.textAlign = 'right';
     ctx.textBaseline = 'middle';
-    for (let m = low; m <= high; m++) {
+    for (let m = first; m <= last; m++) {
       const active = m === currentRow;
       if (!active && !isC(m) && rowH < LABEL_MIN_ROW) continue;
       ctx.font = `${active || isC(m) ? 600 : 400} 11px system-ui, sans-serif`;

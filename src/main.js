@@ -8,12 +8,13 @@ const NOTE_MIN = 24;   // C1
 const NOTE_MAX = 96;   // C7
 const IDLE_AFTER_MS = 400;
 const SETTINGS_KEY = 'pitcher.settings';
-const DEFAULTS = { low: 36, high: 84, window: 10, snap: false, gate: -50, deviceId: '' };
+const DEFAULTS = { autoRange: true, low: 36, high: 84, window: 10, snap: false, gate: -50, deviceId: '' };
 
 const $ = (id) => document.getElementById(id);
 const els = {
   toggle: $('toggle'),
   device: $('device'),
+  autoRange: $('autoRange'),
   low: $('low'),
   high: $('high'),
   window: $('window'),
@@ -58,12 +59,14 @@ function saveSettings() {
 }
 
 function applySettings() {
-  graph.low = settings.low;
-  graph.high = settings.high;
+  graph.auto = settings.autoRange;
+  if (!settings.autoRange) graph.setRange(settings.low, settings.high);
   graph.windowMs = settings.window * 1000;
   graph.snap = settings.snap;
-  els.low.value = settings.low;
-  els.high.value = settings.high;
+  els.autoRange.checked = settings.autoRange;
+  els.low.disabled = els.high.disabled = settings.autoRange;
+  els.low.value = graph.low;
+  els.high.value = graph.high;
   els.window.value = settings.window;
   els.snap.checked = settings.snap;
   els.gate.value = settings.gate;
@@ -255,6 +258,20 @@ els.device.addEventListener('change', () => {
   settings.deviceId = els.device.value;
   saveSettings();
   restart();
+});
+
+// In auto mode the selects just show the range the graph picked.
+graph.onRangeChange = (low, high) => {
+  els.low.value = low;
+  els.high.value = high;
+};
+
+els.autoRange.addEventListener('change', () => {
+  settings.autoRange = els.autoRange.checked;
+  // Switching auto off keeps the range it was showing.
+  if (!settings.autoRange) Object.assign(settings, { low: graph.low, high: graph.high });
+  saveSettings();
+  applySettings();
 });
 
 els.low.addEventListener('change', () => onRangeChange('low'));

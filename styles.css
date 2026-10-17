@@ -133,8 +133,10 @@ body {
   color: var(--muted);
 }
 
-.toolbar label { display: inline-flex; align-items: center; gap: 6px; }
+.toolbar label, .toolbar .range { display: inline-flex; align-items: center; gap: 6px; }
 .toolbar .dash { color: var(--muted); }
+
+select:disabled { opacity: 0.6; }
 
 select, button {
   font: inherit;
