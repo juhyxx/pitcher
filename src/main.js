@@ -1,6 +1,8 @@
 import { PitchGraph } from './graph.js';
 import { freqToMidi, midiToFreq, noteName } from './notes.js';
 import { createYinDetector } from './pitch.js';
+import { setupPwa } from './pwa.js';
+import { VERSION } from './version.js';
 
 const FFT_SIZE = 2048;
 const NOTE_MIN = 24;   // C1
@@ -27,6 +29,7 @@ const els = {
   freq: $('freq'),
   cents: $('cents'),
   needle: $('needle'),
+  version: $('version'),
 };
 
 const settings = loadSettings();
@@ -284,6 +287,9 @@ document.addEventListener('keydown', (e) => {
 
 navigator.mediaDevices?.addEventListener?.('devicechange', refreshDevices);
 
+els.version.textContent = VERSION === 'dev' ? 'dev' : `v${VERSION.replace('+', ' · ')}`;
+
 fillNoteSelects();
 applySettings();
 refreshDevices();
+setupPwa();
